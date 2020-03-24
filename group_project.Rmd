@@ -1,0 +1,56 @@
+---
+title: "Midterm exam"
+author: "Litian Zhou"
+date: "2/28/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(tidyverse)
+library(grid)
+library(gridExtra)
+library(readr)
+library(dplyr)
+```
+
+## 1a
+```{r echo=TRUE}
+heart_rate = read.csv("./data/LitianZhou/HR.csv", skip = 1, header = F)[[1]]
+eda = read.csv("./data/LitianZhou/EDA.csv", skip = 1, header = F)[[1]]
+acc = read.csv("./data/LitianZhou/ACC.csv")
+tag = read.csv("./data/LitianZhou/tags_full.csv", header = F)
+
+# calculate mean value of ACC, EDA and TEMP in each second
+mean_per_second = function(series, sampling_freq) {
+  one_sec_window = seq(1,length(series), by=sampling_freq)
+  total_sec = ceiling(length(series)/sampling_freq)
+  new_series = rep(NA, total_sec-1)
+  for (s in 1:(total_sec-1)) {
+    one_sec_data = one_sec_window[s]:(one_sec_window[s]+sampling_freq-1)
+    new_series[s] = mean(series[one_sec_data])
+  }
+  return(new_series)
+}
+acc = mean_per_second(sqrt(acc[,1]^2+acc[,2]^2+acc[,3]^2), sampling_freq = 32)
+eda = mean_per_second(eda[-c(1:7)], sampling_freq = 4)
+
+cut_tail = min(length(heart_rate),length(acc),length(eda))
+heart_rate = heart_rate[1:cut_tail]
+acc = acc[1:cut_tail]
+eda = eda[1:cut_tail]
+
+timezone = 'America/Detroit'
+start_time_sec = as.numeric(read.csv("HR.csv", header = F, nrows = 1))
+total_sec = length(heart_rate)
+time_line_sec = start_time_sec + 1:total_sec
+time_line = as.POSIXlt(time_line_sec, origin = "1970-01-01",tz = timezone)
+
+df = data.frame(time_line, heart_rate, eda, acc)
+df$sleep = 0
+df$sleep = as.numeric(df$time_line > tags[1] & df$time_line < tags[2])
+```
+
+
+### Reference:
